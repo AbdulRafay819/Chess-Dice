@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0d14" />
+    <meta
+      name="description"
+      content="Dice Chess — chess movement limited by a die, with an aimed, server-resolved sniping phase."
+    />
+    <title>Dice Chess — die-limited chess with sniping</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <main id="stage">
+        <div id="vignette" aria-hidden="true"></div>
+        <div id="checkFlash" aria-hidden="true"></div>
+
+        <header id="topbar">
+          <div class="brand">
+            <span class="brand-mark" aria-hidden="true">♞</span>
+            <span class="brand-text">
+              <strong>Dice Chess</strong>
+              <small>die · move · snipe</small>
+            </span>
+          </div>
+
+          <div class="stat" id="turnCard">
+            <span class="label">Turn</span>
+            <strong id="turnName">White</strong>
+          </div>
+
+          <div class="stat" id="dieCard">
+            <span class="label">Die</span>
+            <strong id="dieValue">—</strong>
+          </div>
+
+          <div class="viewGroup" role="group" aria-label="Camera view">
+            <button type="button" data-view="bird">Bird</button>
+            <button type="button" data-view="human" class="active" aria-pressed="true">
+              Human
+            </button>
+          </div>
+
+          <button type="button" id="menuBtn">Menu</button>
+        </header>
+
+        <div id="message" role="status" aria-live="polite">
+          Roll the die to begin. A six lets you move or snipe.
+        </div>
+
+        <div id="roomBadge" hidden></div>
+
+        <section id="aimPanel" aria-label="Shot settings" hidden>
+          <div class="aim-head">
+            <span class="label">Power</span>
+            <strong id="powerText">0%</strong>
+          </div>
+          <div id="powerTrack" role="progressbar" aria-label="Shot power" aria-valuemin="0" aria-valuemax="100">
+            <div id="powerFill" data-level="low"></div>
+          </div>
+        </section>
+
+        <footer id="dock">
+          <button type="button" id="rollBtn" class="primary">Roll die</button>
+          <div id="choiceRow" hidden>
+            <button type="button" id="moveChoice" class="secondary">Move · 6</button>
+            <button type="button" id="snipeChoice" class="primary">Snipe</button>
+          </div>
+          <span id="dockStatus">…</span>
+        </footer>
+      </main>
+    </div>
+
+    <div id="screens" hidden>
+      <!-- Title -->
+      <section class="screen" data-screen="title">
+        <div class="sheet title-sheet">
+          <div class="title-mark" aria-hidden="true">♞</div>
+          <h1>Dice Chess</h1>
+          <p class="tagline">Roll to move. Spend a six on a sniper's shot.</p>
+
+          <div class="menu">
+            <button type="button" id="playComputerBtn" class="primary menu-item" data-autofocus>
+              <strong>Play the computer</strong>
+              <small>You are White</small>
+            </button>
+
+            <div class="segmented" role="radiogroup" aria-label="Computer strength">
+              <button type="button" data-skill="easy" role="radio" aria-checked="false">
+                Casual
+              </button>
+              <button type="button" data-skill="normal" role="radio" aria-checked="true">
+                Club
+              </button>
+              <button type="button" data-skill="sharp" role="radio" aria-checked="false">
+                Sharp
+              </button>
+            </div>
+            <p class="skill-blurb" id="skillBlurb">Takes material, aims straight</p>
+
+            <button type="button" id="playLocalBtn" class="secondary menu-item">
+              <strong>Two players, one screen</strong>
+              <small>Pass and play</small>
+            </button>
+            <button type="button" id="openRoomsBtn" class="secondary menu-item">
+              <strong>Play online</strong>
+              <small>Create or join a six-letter room</small>
+            </button>
+
+            <div class="menu-row">
+              <button type="button" id="openRulesBtn" class="ghost">Rules</button>
+              <button type="button" id="openSettingsBtn" class="ghost">Settings</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Rules -->
+      <section class="screen" data-screen="rules">
+        <div class="sheet">
+          <div class="sheet-head">
+            <h2>How to play</h2>
+            <button type="button" id="rulesBackBtn" class="ghost" data-autofocus>Back</button>
+          </div>
+
+          <div class="card">
+            <h3>Every turn</h3>
+            <ol class="rules">
+              <li><strong>Roll.</strong> The die decides how many of a selected piece's legal destinations you are offered: a 3 shows three squares, a 6 shows six.</li>
+              <li><strong>Pick a piece.</strong> Reselecting it shows the same offer until you make the turn.</li>
+              <li><strong>Move.</strong> Click a glowing square. If a piece has fewer legal moves than the roll, all of them are shown.</li>
+            </ol>
+          </div>
+
+          <div class="card">
+            <h3>Sniping</h3>
+            <ol class="rules">
+              <li><strong>A six is a choice:</strong> take the six-square move offer, or snipe.</li>
+              <li><strong>Aim.</strong> Pick one of your pieces, then drag away from it like a slingshot. Direction snaps to that piece's movement lines; pull further back for more slide.</li>
+              <li><strong>Resolve.</strong> Aim error and a seeded wobble decide whether the line stays true. A shot that veers hits nothing.</li>
+              <li><strong>Blocks.</strong> The first piece on the line stops the shot. A hit ends your turn either way; the shooter stays put.</li>
+            </ol>
+          </div>
+
+          <div class="card">
+            <h3>Winning</h3>
+            <ol class="rules">
+              <li><strong>Kings.</strong> Moves never capture a king — it falls only to checkmate, or to another king's snipe. For every other shooter a king stops the projectile.</li>
+              <li><strong>Win by</strong> checkmate, a sniped king, or by eliminating every enemy piece. No legal moves without check is a draw.</li>
+            </ol>
+          </div>
+
+          <div class="card">
+            <h3>Controls</h3>
+            <ol class="rules">
+              <li><strong>Camera.</strong> Drag to orbit, scroll or pinch to zoom, or use the Bird / Human buttons.</li>
+              <li><strong>Aim.</strong> Release below 4% power to cancel. Escape clears a selection.</li>
+              <li><strong>Menus.</strong> Tab or the arrow keys move between buttons, Enter activates, Escape goes back.</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <!-- Rooms -->
+      <section class="screen" data-screen="rooms">
+        <div class="sheet">
+          <div class="sheet-head">
+            <h2>Play online</h2>
+            <button type="button" id="roomsBackBtn" class="ghost" data-autofocus>Back</button>
+          </div>
+
+          <div class="card">
+            <h3>Your room</h3>
+            <div class="row">
+              <button type="button" id="roomsCreateBtn" class="primary">Create room</button>
+              <button type="button" id="roomsJoinBtn" class="secondary">Join</button>
+            </div>
+            <input
+              id="roomInput"
+              maxlength="6"
+              inputmode="text"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="ROOM CODE"
+              aria-label="Room code"
+            />
+            <p id="roomsStatus">Solo practice. Create a room for a live opponent.</p>
+            <p id="roomsInfo" hidden></p>
+            <button type="button" id="roomsCopy" class="ghost" hidden>Copy invite link</button>
+            <p class="muted">
+              Rooms are validated by the same rules module the browser uses. Snipes are resolved
+              on the server with a seeded wobble, so both players watch the same shot.
+            </p>
+          </div>
+
+          <div class="card">
+            <h3>How the room works</h3>
+            <ol class="rules">
+              <li><strong>Create</strong> a room, then share the code or the invite link.</li>
+              <li><strong>Reconnect.</strong> Your seat is remembered in this browser, so a refresh or a dropped connection rejoins the same colour.</li>
+              <li><strong>Live.</strong> Moves arrive over a realtime channel, with a polling fallback when it is unavailable.</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section class="screen" data-screen="settings">
+        <div class="sheet">
+          <div class="sheet-head">
+            <h2>Settings</h2>
+            <button type="button" id="settingsBackBtn" class="ghost" data-autofocus>Back</button>
+          </div>
+
+          <div class="card">
+            <h3>Feedback</h3>
+            <label class="checkbox">
+              <input type="checkbox" id="shakeToggle" checked />
+              <span>Camera shake on hits and checks</span>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" id="motionToggle" />
+              <span>Reduce motion: shorter camera moves and flashes</span>
+            </label>
+            <p class="muted">
+              Shake and flashes are proportional to the event and always fall back to a still
+              frame when reduced motion is on.
+            </p>
+          </div>
+
+          <div class="card">
+            <h3>About</h3>
+            <p class="muted">
+              Dice Chess is a variant: normal chess movement, die-limited destinations, and a
+              slingshot snipe on a six. Built with Three.js, Vercel, Upstash Redis and Ably.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pause / menu -->
+      <section class="screen" data-screen="pause">
+        <div class="sheet pause-sheet">
+          <h2>Paused</h2>
+          <div class="menu">
+            <button type="button" id="pauseResumeBtn" class="primary menu-item" data-autofocus>
+              <strong>Resume</strong>
+            </button>
+            <button type="button" id="pauseNewBtn" class="secondary menu-item">New game</button>
+            <button type="button" id="pauseRulesBtn" class="ghost menu-item">Rules</button>
+            <button type="button" id="pauseSettingsBtn" class="ghost menu-item">Settings</button>
+            <button type="button" id="pauseMenuBtn" class="ghost menu-item">Main menu</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div id="gameOver" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+        <span class="label">Match complete</span>
+        <h2 id="resultTitle">Checkmate</h2>
+        <p id="resultText"></p>
+        <button type="button" id="playAgainBtn" class="primary">Play again</button>
+        <button type="button" id="menuAfterBtn" class="ghost">Main menu</button>
+      </div>
+    </div>
+
+    <div id="boot">
+      <span class="spinner" aria-hidden="true"></span>
+      <p>Setting the board…</p>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
