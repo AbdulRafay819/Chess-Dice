@@ -15,8 +15,8 @@
  * - Kings are only eliminable by a king; any other shooter is stopped by one.
  */
 
-import { indexOf, onBoard, frToSquare, squareToFR, type Position } from './board';
-import type { Piece, SnipeResult, Square } from './types';
+import { indexOf, onBoard, frToSquare, squareToFR, type Position } from './board.js';
+import type { Piece, SnipeResult, Square } from './types.js';
 
 export const V_MAX = 6;
 export const MU = 0.306;

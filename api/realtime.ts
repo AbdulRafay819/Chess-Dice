@@ -1,8 +1,8 @@
 import { createHmac, randomBytes } from 'node:crypto';
-import { run } from './_lib/game';
-import { parseRequest, send } from './_lib/http';
-import { ablyCredentials } from './_lib/publish';
-import { ApiError } from './_lib/validate';
+import { run } from './_lib/game.js';
+import { parseRequest, send } from './_lib/http.js';
+import { ablyCredentials } from './_lib/publish.js';
+import { ApiError } from './_lib/validate.js';
 
 /**
  * Hands the browser a short-lived, subscribe-only Ably TokenRequest for one

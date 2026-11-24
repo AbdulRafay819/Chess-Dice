@@ -1,9 +1,9 @@
-import { initialState } from '../src/shared/rules';
-import { run } from './_lib/game';
-import { parseRequest } from './_lib/http';
-import { newRoomCode, newToken, saveRoom, snapshot, getRoom, type RoomRecord } from './_lib/store';
-import { ApiError } from './_lib/validate';
-import { publishState } from './_lib/publish';
+import { initialState } from '../src/shared/rules.js';
+import { run } from './_lib/game.js';
+import { parseRequest } from './_lib/http.js';
+import { newRoomCode, newToken, saveRoom, snapshot, getRoom, type RoomRecord } from './_lib/store.js';
+import { ApiError } from './_lib/validate.js';
+import { publishState } from './_lib/publish.js';
 
 export default async function handler(req: unknown, res: unknown) {
   await run(res, async () => {

@@ -1,9 +1,9 @@
-import { RulesError } from '../../src/shared/rules';
-import type { Color, GameState, PublicGameState } from '../../src/shared/types';
-import { send } from './http';
-import { publishState } from './publish';
-import { getRoom, saveRoom, snapshot, type RoomRecord } from './store';
-import { ApiError } from './validate';
+import { RulesError } from '../../src/shared/rules.js';
+import type { Color, GameState, PublicGameState } from '../../src/shared/types.js';
+import { send } from './http.js';
+import { publishState } from './publish.js';
+import { getRoom, saveRoom, snapshot, type RoomRecord } from './store.js';
+import { ApiError } from './validate.js';
 
 export async function run(res: unknown, fn: () => Promise<unknown>): Promise<void> {
   try {

@@ -1,4 +1,4 @@
-import type { ApiRequest } from './http';
+import type { ApiRequest } from './http.js';
 
 export function roomIdOf(req: ApiRequest): string {
   const room = String(req.body.room ?? req.query.room ?? '')

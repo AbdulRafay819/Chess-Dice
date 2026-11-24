@@ -8,7 +8,7 @@
  */
 
 import { Chess } from 'chess.js';
-import type { Color, Piece, PieceType, Square } from './types';
+import type { Color, Piece, PieceType, Square } from './types.js';
 
 export const FILES = 'abcdefgh';
 export const RANKS = '87654321';

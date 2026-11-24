@@ -1,7 +1,7 @@
-import { run } from './_lib/game';
-import { parseRequest } from './_lib/http';
-import { getRoom, snapshot } from './_lib/store';
-import { ApiError, roomIdOf } from './_lib/validate';
+import { run } from './_lib/game.js';
+import { parseRequest } from './_lib/http.js';
+import { getRoom, snapshot } from './_lib/store.js';
+import { ApiError, roomIdOf } from './_lib/validate.js';
 
 /** Polling fallback and reconnect: cheap, cache-less, safe to call often. */
 export default async function handler(req: unknown, res: unknown) {

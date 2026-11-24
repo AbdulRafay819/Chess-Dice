@@ -33,8 +33,8 @@ import type {
   PublicGameState,
   SnipeResult,
   Square,
-} from './types';
-import { other } from './types';
+} from './types.js';
+import { other } from './types.js';
 import {
   attackers,
   findKing,
@@ -50,8 +50,8 @@ import {
   toFen,
   type Board,
   type Position,
-} from './board';
-import { dirAngle, mulberry32, resolveSnipe, snipeDirections } from './snipe';
+} from './board.js';
+import { dirAngle, mulberry32, resolveSnipe, snipeDirections } from './snipe.js';
 
 export const MAX_ROLL = 6;
 export const SNIPE_SQUARES = 6;

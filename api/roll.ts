@@ -1,8 +1,8 @@
-import { applyRoll } from '../src/shared/rules';
-import { assertTurn, mutate, run } from './_lib/game';
-import { parseRequest } from './_lib/http';
-import { newSeed } from './_lib/store';
-import { ApiError, roomIdOf, tokenOf } from './_lib/validate';
+import { applyRoll } from '../src/shared/rules.js';
+import { assertTurn, mutate, run } from './_lib/game.js';
+import { parseRequest } from './_lib/http.js';
+import { newSeed } from './_lib/store.js';
+import { ApiError, roomIdOf, tokenOf } from './_lib/validate.js';
 
 export default async function handler(req: unknown, res: unknown) {
   await run(res, async () => {

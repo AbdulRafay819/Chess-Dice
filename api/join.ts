@@ -1,9 +1,9 @@
-import type { Color } from '../src/shared/types';
-import { run } from './_lib/game';
-import { parseRequest } from './_lib/http';
-import { publishState } from './_lib/publish';
-import { getRoom, newToken, saveRoom, snapshot } from './_lib/store';
-import { ApiError, roomIdOf } from './_lib/validate';
+import type { Color } from '../src/shared/types.js';
+import { run } from './_lib/game.js';
+import { parseRequest } from './_lib/http.js';
+import { publishState } from './_lib/publish.js';
+import { getRoom, newToken, saveRoom, snapshot } from './_lib/store.js';
+import { ApiError, roomIdOf } from './_lib/validate.js';
 
 export default async function handler(req: unknown, res: unknown) {
   await run(res, async () => {

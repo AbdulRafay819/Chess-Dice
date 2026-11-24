@@ -1,7 +1,7 @@
-import { applySnipe } from '../src/shared/rules';
-import { assertTurn, mutate, run } from './_lib/game';
-import { parseRequest } from './_lib/http';
-import { ApiError, roomIdOf, tokenOf } from './_lib/validate';
+import { applySnipe } from '../src/shared/rules.js';
+import { assertTurn, mutate, run } from './_lib/game.js';
+import { parseRequest } from './_lib/http.js';
+import { ApiError, roomIdOf, tokenOf } from './_lib/validate.js';
 
 const SQUARE = /^[a-h][1-8]$/;
 

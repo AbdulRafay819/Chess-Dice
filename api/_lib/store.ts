@@ -1,7 +1,7 @@
-import type { GameState, PublicGameState, Color } from '../../src/shared/types';
-import { publicState } from '../../src/shared/types';
+import type { GameState, PublicGameState, Color } from '../../src/shared/types.js';
+import { publicState } from '../../src/shared/types.js';
 
-export type { ApiRequest } from './http';
+export type { ApiRequest } from './http.js';
 
 export interface RoomRecord {
   id: string;

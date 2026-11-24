@@ -1,7 +1,7 @@
-import { run } from './_lib/game';
-import { parseRequest } from './_lib/http';
-import { realtimeEnabled } from './_lib/publish';
-import { usingRedis } from './_lib/store';
+import { run } from './_lib/game.js';
+import { parseRequest } from './_lib/http.js';
+import { realtimeEnabled } from './_lib/publish.js';
+import { usingRedis } from './_lib/store.js';
 
 /** Tells the client whether to open a realtime channel or just poll. */
 export default async function handler(req: unknown, res: unknown) {
