@@ -22,6 +22,7 @@ import type {
   Square,
 } from './shared/types';
 import { PIECE_NAME } from './shared/types';
+import { Aurevak } from './render/aurevak';
 import { BoardView } from './render/board3d';
 import { Die } from './render/die';
 import { createPieceMaterials } from './render/materials';
@@ -55,6 +56,10 @@ stage.add(pieceRoot);
 const physics = new Physics();
 const die = new Die(physics);
 stage.add(die.group);
+
+// The monument that casts the die. Its core flares and the die leaves its hand.
+const aurevak = new Aurevak();
+stage.add(aurevak.group);
 
 const aim = new AimGuide(board);
 stage.add(aim.group);
@@ -380,7 +385,8 @@ function present(next: AnyState) {
     return;
   }
   if (action?.type === 'roll') {
-    void die.roll(action.value);
+    aurevak.invoke();
+    void die.roll(action.value, aurevak.handPoint());
   }
   finishPresent(next);
 }
@@ -1095,6 +1101,12 @@ function refreshHud() {
     inCheck: flags.inCheck,
     snipeBlocked: flags.snipeBlocked,
   });
+  // The board always faces the player who owns this browser: White from one
+  // side of the table, Black from the other.
+  const side: Color = mode === 'online' && myColor === 'b' ? 'b' : 'w';
+  stage.setSide(side);
+  aurevak.setSide(side);
+  die.setSide(side);
   screens.setRoom(
     mode === 'online' ? net.session?.room ?? null : null,
     myColor,
@@ -1118,6 +1130,8 @@ function frame(now: number) {
 
   if (physics.ready) physics.step(dt);
   die.update(now);
+  aurevak.setFocus(die.position);
+  aurevak.update(realDt, time);
   board.update(dt, time);
 
   for (let i = dropTweens.length - 1; i >= 0; i--) {

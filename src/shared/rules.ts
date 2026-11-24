@@ -1,5 +1,5 @@
 /**
- * The rules of Dice Chess, shared verbatim by the browser and the serverless
+ * The rules of Aurevak, shared verbatim by the browser and the serverless
  * functions. The client never decides an outcome: it renders what these
  * functions return.
  *

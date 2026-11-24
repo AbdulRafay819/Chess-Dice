@@ -1,4 +1,6 @@
-# Dice Chess
+# AUREVAK
+
+*The first to rule. The last to fall.*
 
 Chess movement limited by a die, with an aimed sniping phase. Three.js for the
 board, one shared TypeScript rules module for both the browser and the server,

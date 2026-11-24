@@ -3,12 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0a0d14" />
+    <meta name="theme-color" content="#070910" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta
       name="description"
-      content="Dice Chess — chess movement limited by a die, with an aimed, server-resolved sniping phase."
+      content="AUREVAK — chess movement limited by a die, with an aimed, server-resolved sniping phase. The first to rule. The last to fall."
     />
-    <title>Dice Chess — die-limited chess with sniping</title>
+    <title>AUREVAK — The first to rule. The last to fall.</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg" />
+    <link rel="apple-touch-icon" href="/assets/brand/aurevak-logo.svg" />
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
@@ -19,9 +24,9 @@
 
         <header id="topbar">
           <div class="brand">
-            <span class="brand-mark" aria-hidden="true">♞</span>
+            <img class="brand-mark" src="/assets/brand/aurevak-logo.svg" alt="" aria-hidden="true" />
             <span class="brand-text">
-              <strong>Dice Chess</strong>
+              <strong>Aurevak</strong>
               <small>die · move · snipe</small>
             </span>
           </div>
@@ -77,14 +82,15 @@
       <!-- Title -->
       <section class="screen" data-screen="title">
         <div class="sheet title-sheet">
-          <div class="title-mark" aria-hidden="true">♞</div>
-          <h1>Dice Chess</h1>
+          <img class="title-mark" src="/assets/brand/aurevak-logo.svg" alt="" aria-hidden="true" />
+          <h1>Aurevak</h1>
+          <p class="kicker">The first to rule. The last to fall.</p>
           <p class="tagline">Roll to move. Spend a six on a sniper's shot.</p>
 
           <div class="menu">
             <button type="button" id="playComputerBtn" class="primary menu-item" data-autofocus>
               <strong>Play the computer</strong>
-              <small>You are White</small>
+              <small>You are White — Aurevak rolls for you</small>
             </button>
 
             <div class="segmented" role="radiogroup" aria-label="Computer strength">
@@ -234,7 +240,8 @@
           <div class="card">
             <h3>About</h3>
             <p class="muted">
-              Dice Chess is a variant: normal chess movement, die-limited destinations, and a
+              Aurevak is the power that casts the die: an entity older than the first kingdom.
+              The game is a chess variant — normal movement, die-limited destinations and a
               slingshot snipe on a six. Built with Three.js, Vercel, Upstash Redis and Ably.
             </p>
           </div>
@@ -270,7 +277,7 @@
 
     <div id="boot">
       <span class="spinner" aria-hidden="true"></span>
-      <p>Setting the board…</p>
+      <p>Waking Aurevak…</p>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

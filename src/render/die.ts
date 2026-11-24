@@ -6,7 +6,7 @@ const SIZE = 0.62;
 const HALF = SIZE / 2;
 // Resting spot on the near frame rail, clear of the playing surface so the die
 // never sits inside the h1 rook.
-const REST = new THREE.Vector3(-3.1, 0.44, 4.4);
+const REST = new THREE.Vector3(-3.15, 0.5, 4.6);
 
 /** value → local face normal, arranged so opposite faces sum to seven. */
 const FACE_NORMAL: Record<number, THREE.Vector3> = {
@@ -67,6 +67,7 @@ export class Die {
   readonly group = new THREE.Group();
   readonly mesh: THREE.Mesh;
   private body: ReturnType<Physics['spawnDie']> = null;
+  private rest = REST.clone();
   private target = restQuaternion(1);
   private settleFrom = new THREE.Vector3();
   private settleFromQuat = new THREE.Quaternion();
@@ -124,20 +125,31 @@ export class Die {
     this.reset();
   }
 
+  /** Keep the resting die on the player's own rail. */
+  setSide(color: 'w' | 'b') {
+    this.rest.copy(REST);
+    if (color === 'b') this.rest.set(-REST.x, REST.y, -REST.z);
+    if (!this.tumbling && !this.settling) this.group.position.copy(this.rest);
+  }
+
   reset() {
     this.physics.remove(this.body);
     this.body = null;
     this.tumbling = false;
     this.settling = false;
     this.group.visible = true;
-    this.group.position.copy(REST);
+    this.group.position.copy(this.rest);
     this.mesh.quaternion.copy(restQuaternion(this.faceUp));
     this.resolve?.();
     this.resolve = null;
   }
 
-  /** Tumble, then settle showing `value`. Resolves when it has come to rest. */
-  async roll(value: number): Promise<void> {
+  /**
+   * Tumble, then settle showing `value`. Resolves when it has come to rest.
+   * `origin` is the hand that casts it (Aurevak), so the die is thrown inward
+   * from there instead of dropping out of nowhere.
+   */
+  async roll(value: number, origin?: THREE.Vector3): Promise<void> {
     this.faceUp = value;
     this.target = restQuaternion(value);
     this.resolve?.();
@@ -145,12 +157,23 @@ export class Die {
     this.tumbling = true;
     this.group.visible = true;
 
-    const from = new THREE.Vector3(-2.6 + Math.random() * 1.6, 2.4, 1.2);
-    const impulse = new THREE.Vector3(
-      (Math.random() - 0.5) * 0.32,
-      -0.02,
-      0.22 + Math.random() * 0.12,
-    );
+    const from = origin
+      ? origin.clone()
+      : new THREE.Vector3(-2.6 + Math.random() * 1.6, 2.4, 1.2);
+    const inward = new THREE.Vector3(-from.x, 0, -from.z);
+    if (inward.lengthSq() < 0.01) inward.set(0, 0, -1);
+    inward.normalize();
+    const impulse = origin
+      ? new THREE.Vector3(
+          inward.x * 0.5 + (Math.random() - 0.5) * 0.12,
+          0.05,
+          inward.z * 0.5 + (Math.random() - 0.5) * 0.12,
+        )
+      : new THREE.Vector3(
+          (Math.random() - 0.5) * 0.32,
+          -0.02,
+          0.22 + Math.random() * 0.12,
+        );
     this.body = this.physics.ready ? this.physics.spawnDie(from, impulse) : null;
     if (!this.body) {
       this.group.position.copy(from);
@@ -182,12 +205,12 @@ export class Die {
     if (this.settling) {
       this.settleT = Math.min(1, this.settleT + 0.055);
       const eased = 1 - Math.pow(1 - this.settleT, 3);
-      this.group.position.lerpVectors(this.settleFrom, REST, eased);
+      this.group.position.lerpVectors(this.settleFrom, this.rest, eased);
       this.mesh.quaternion.slerpQuaternions(this.settleFromQuat, this.target, eased);
       if (this.settleT >= 1) {
         this.settling = false;
         this.tumbling = false;
-        this.group.position.copy(REST);
+        this.group.position.copy(this.rest);
         this.mesh.quaternion.copy(this.target);
         const resolve = this.resolve;
         this.resolve = null;
