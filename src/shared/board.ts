@@ -123,32 +123,26 @@ const BISHOP_LINES = [
   [-1, -1],
 ];
 
-/** Is `square` attacked by any piece of `by`? Written locally so extended
- *  movement can be validated without relying on chess.js internals. */
-export function isAttacked(board: Board, square: Square, by: Color): boolean {
+/** Every square holding a piece of `by` that attacks `square`. Written locally
+ *  so extended movement can be validated without relying on chess.js internals;
+ *  the check highlight and the "snipe the checker" rule both need the squares,
+ *  not just a yes/no. */
+export function attackers(board: Board, square: Square, by: Color): Square[] {
   const { f, r } = squareToFR(square);
+  const out: Square[] = [];
+  const add = (nf: number, nr: number, type: PieceType) => {
+    if (!onBoard(nf, nr)) return;
+    const piece = board[indexOf(nf, nr)];
+    if (piece && piece.color === by && piece.type === type) out.push(frToSquare(nf, nr));
+  };
 
+  // A `by` pawn attacking this square sits one rank behind it from its own side.
   const pawnRow = by === 'w' ? r + 1 : r - 1;
-  const pawn = board[indexOf(f - 1, pawnRow)];
-  if (pawn && pawn.type === 'p' && pawn.color === by && onBoard(f - 1, pawnRow)) return true;
-  const pawn2 = board[indexOf(f + 1, pawnRow)];
-  if (pawn2 && pawn2.type === 'p' && pawn2.color === by && onBoard(f + 1, pawnRow)) return true;
+  add(f - 1, pawnRow, 'p');
+  add(f + 1, pawnRow, 'p');
 
-  for (const [df, dr] of KNIGHT_STEPS) {
-    const nf = f + df;
-    const nr = r + dr;
-    if (!onBoard(nf, nr)) continue;
-    const piece = board[indexOf(nf, nr)];
-    if (piece && piece.color === by && piece.type === 'n') return true;
-  }
-
-  for (const [df, dr] of KING_STEPS) {
-    const nf = f + df;
-    const nr = r + dr;
-    if (!onBoard(nf, nr)) continue;
-    const piece = board[indexOf(nf, nr)];
-    if (piece && piece.color === by && piece.type === 'k') return true;
-  }
+  for (const [df, dr] of KNIGHT_STEPS) add(f + df, r + dr, 'n');
+  for (const [df, dr] of KING_STEPS) add(f + df, r + dr, 'k');
 
   const slide = (lines: number[][], types: PieceType[]) => {
     for (const [df, dr] of lines) {
@@ -158,16 +152,20 @@ export function isAttacked(board: Board, square: Square, by: Color): boolean {
         if (!onBoard(nf, nr)) break;
         const piece = board[indexOf(nf, nr)];
         if (!piece) continue;
-        if (piece.color === by && types.includes(piece.type)) return true;
+        if (piece.color === by && types.includes(piece.type)) out.push(frToSquare(nf, nr));
         break;
       }
     }
-    return false;
   };
 
-  if (slide(ROOK_LINES, ['r', 'q'])) return true;
-  if (slide(BISHOP_LINES, ['b', 'q'])) return true;
-  return false;
+  slide(ROOK_LINES, ['r', 'q']);
+  slide(BISHOP_LINES, ['b', 'q']);
+  return out;
+}
+
+/** Is `square` attacked by any piece of `by`? */
+export function isAttacked(board: Board, square: Square, by: Color): boolean {
+  return attackers(board, square, by).length > 0;
 }
 
 export function inCheck(pos: Position, color: Color): boolean {

@@ -276,8 +276,11 @@ input:focus-visible,
   transform: translateX(-50%);
   z-index: 4;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 12px;
+  row-gap: 8px;
   padding: 10px 12px;
   border-radius: 16px;
   background: rgba(10, 14, 22, 0.8);
@@ -301,6 +304,13 @@ input:focus-visible,
   font-size: 12.5px;
   padding-right: 6px;
   white-space: nowrap;
+  max-width: min(420px, 100%);
+}
+
+#dockStatus.warn {
+  color: var(--gold-strong);
+  white-space: normal;
+  line-height: 1.35;
 }
 
 #choiceRow {

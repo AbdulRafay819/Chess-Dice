@@ -7,6 +7,14 @@ import { usingRedis } from './_lib/store';
 export default async function handler(req: unknown, res: unknown) {
   await run(res, async () => {
     await parseRequest(req);
-    return { ok: true, realtime: realtimeEnabled(), redis: usingRedis() };
+    return {
+      ok: true,
+      realtime: realtimeEnabled(),
+      redis: usingRedis(),
+      // Which store is actually in use. "memory" means the deployment is
+      // missing UPSTASH_* and rooms will not survive a different function
+      // instance, which breaks online play between two browsers.
+      store: usingRedis() ? 'redis' : 'memory',
+    };
   });
 }

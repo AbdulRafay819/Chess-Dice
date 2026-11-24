@@ -36,7 +36,9 @@ import type {
 } from './types';
 import { other } from './types';
 import {
+  attackers,
   findKing,
+  frToSquare,
   inCheck,
   indexOf,
   INITIAL_FEN,
@@ -49,7 +51,7 @@ import {
   type Board,
   type Position,
 } from './board';
-import { mulberry32, resolveSnipe, snipeDirections } from './snipe';
+import { dirAngle, mulberry32, resolveSnipe, snipeDirections } from './snipe';
 
 export const MAX_ROLL = 6;
 export const SNIPE_SQUARES = 6;
@@ -298,6 +300,13 @@ export function applyChoice(state: GameState, choice: 'move' | 'snipe'): GameSta
   if (state.phase !== 'choice' || state.die !== MAX_ROLL) {
     throw new RulesError('Sniping is only available on a six.');
   }
+  // In check, a snipe is only worth the turn when it can remove the checker;
+  // otherwise the only legal plan is a move that blocks, captures or steps away.
+  if (choice === 'snipe' && sideInCheck(state) && !hasCheckShot(state)) {
+    throw new RulesError(
+      'Your king is in check and no shot reaches the checking piece — move to block the check.',
+    );
+  }
   return {
     ...state,
     phase: choice === 'move' ? 'move' : 'snipe',
@@ -350,6 +359,9 @@ export function applySnipe(
   const pos = parseFen(state.fen);
   const piece = pieceAt(pos, from);
   if (!piece || piece.color !== state.turn) throw new RulesError('That is not your piece.');
+  if (!snipeTargetsChecker(state, from, angle, power)) {
+    throw new RulesError('Your king is in check: snipe the checking piece, or move to block.');
+  }
 
   const result = resolveSnipe({
     pos,
@@ -392,6 +404,57 @@ export function previewSnipe(state: GameState, from: Square, angle: number, powe
     seed: null,
     maxSquares: SNIPE_SQUARES,
   });
+}
+
+/** Squares of the enemy pieces giving check to the side to move. */
+export function checkingPieces(state: GameState): Square[] {
+  const pos = parseFen(state.fen);
+  const king = findKing(pos.board, state.turn);
+  if (!king) return [];
+  return attackers(pos.board, king, other(state.turn));
+}
+
+/** Is the side to move currently in check? */
+export function sideInCheck(state: GameState): boolean {
+  return inCheck(parseFen(state.fen), state.turn);
+}
+
+/**
+ * A shot in check must take a piece that is actually checking the king. The
+ * aimed line is judged before the seeded wobble, so a perfect aim can still
+ * drift wide — the rule constrains intent, not luck.
+ */
+export function snipeTargetsChecker(
+  state: GameState,
+  from: Square,
+  angle: number,
+  power: number,
+): boolean {
+  if (!sideInCheck(state)) return true;
+  const checkers = checkingPieces(state);
+  if (!checkers.length) return false;
+  const preview = previewSnipe(state, from, angle, power);
+  return Boolean(preview?.eliminated && preview.hitSquare && checkers.includes(preview.hitSquare));
+}
+
+/** Can any of the mover's pieces reach a checking piece with a snipe? */
+export function hasCheckShot(state: GameState): boolean {
+  if (!sideInCheck(state)) return true;
+  const checkers = checkingPieces(state);
+  if (!checkers.length) return false;
+  const pos = parseFen(state.fen);
+  for (let i = 0; i < 64; i++) {
+    const piece = pos.board[i];
+    if (!piece || piece.color !== state.turn) continue;
+    const from = frToSquare(i % 8, Math.floor(i / 8));
+    for (const dir of snipeDirections(piece)) {
+      const preview = previewSnipe(state, from, dirAngle(dir), 1);
+      if (preview?.eliminated && preview.hitSquare && checkers.includes(preview.hitSquare)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 /** Places the die back in the cup when a new game starts. */

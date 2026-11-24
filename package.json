@@ -10,8 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ably/pubsub-device": "^3.2.0",
     "@dimforge/rapier3d-compat": "^0.17.3",
-    "ably": "^2.6.5",
     "chess.js": "^1.0.0",
     "three": "^0.169.0"
   },

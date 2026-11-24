@@ -5,9 +5,12 @@ import {
   applyMove,
   applyRoll,
   applySnipe,
+  checkingPieces,
+  hasCheckShot,
   initialState,
   offeredMoves,
   previewSnipe,
+  sideInCheck,
 } from './shared/rules';
 import type {
   Color,
@@ -319,6 +322,29 @@ function checkSquares(state: AnyState): Square[] {
   return out;
 }
 
+/** Check flags for the HUD: is the side to move checked, and can a six snipe
+ *  out of it? Both are derived from the same shared rules the server enforces. */
+function checkFlags(state: AnyState): { inCheck: boolean; snipeBlocked: boolean } {
+  if (state.status !== 'playing') return { inCheck: false, snipeBlocked: false };
+  const cast = state as GameState;
+  if (!sideInCheck(cast)) return { inCheck: false, snipeBlocked: false };
+  return { inCheck: true, snipeBlocked: !hasCheckShot(cast) };
+}
+
+/** A check message that replaces the usual turn blurb when it matters. */
+function checkWarning(state: AnyState): string | null {
+  if (state.status !== 'playing' || !canAct()) return null;
+  const cast = state as GameState;
+  if (!sideInCheck(cast)) return null;
+  if (state.phase === 'choice') {
+    return hasCheckShot(cast)
+      ? 'Your king is in check — snipe the checking piece, or move to block.'
+      : 'Your king is in check and no shot reaches the checking piece. You must move to block the check.';
+  }
+  if (state.phase === 'snipe') return 'Your king is in check — take out the checking piece.';
+  return null;
+}
+
 function refreshHighlights() {
   if (aiming) return;
   const state = S();
@@ -364,7 +390,7 @@ function finishPresent(state: AnyState) {
   legal = [];
   syncBoard(state);
   refreshHud();
-  hud.setMessage(describe(state));
+  hud.setMessage(checkWarning(state) ?? describe(state));
   playFeedback(state);
   maybeAiTurn();
 }
@@ -538,7 +564,12 @@ function choose(choice: 'move' | 'snipe') {
   if (!canAct()) return;
 
   if (mode !== 'online') {
-    solo = { ...applyChoice(solo, choice), version: solo.version + 1 };
+    try {
+      solo = { ...applyChoice(solo, choice), version: solo.version + 1 };
+    } catch (error) {
+      hud.setMessage((error as Error).message);
+      return;
+    }
     present(solo);
     hud.setMessage(
       choice === 'move'
@@ -665,13 +696,22 @@ function updateAim(event: PointerEvent) {
   if (!preview) return;
 
   const end = preview.hitSquare ?? preview.blockedBy ?? preview.path[preview.path.length - 1] ?? null;
+  // In check the aim guide only reads "on target" for the checking piece, so
+  // a shot that cannot answer the check is never presented as a good idea.
+  const checkers = sideInCheck(state) ? checkingPieces(state) : [];
+  const answersCheck =
+    !checkers.length ||
+    Boolean(preview.eliminated && preview.hitSquare && checkers.includes(preview.hitSquare));
   aim.update({
     from: aiming.from,
     angle: preview.dirAngle,
     end,
-    onTarget: Boolean(preview.hitSquare),
+    onTarget: answersCheck && Boolean(preview.hitSquare),
     blocked: !preview.hitSquare && Boolean(preview.blockedBy),
   });
+  if (checkers.length && !answersCheck) {
+    hud.setMessage('Your king is in check — aim at the checking piece.');
+  }
   board.setHighlights({
     selected: aiming.from,
     path: preview.path,
@@ -1044,6 +1084,7 @@ function endMessage(state: AnyState): string {
 
 function refreshHud() {
   const state = S();
+  const flags = checkFlags(state);
   hud.sync(state, {
     myColor: mode === 'computer' ? 'w' : myColor,
     versus: mode !== 'solo',
@@ -1051,6 +1092,8 @@ function refreshHud() {
     busy: busy || snipePlaying,
     aiming: Boolean(aiming),
     thinking: aiRunning,
+    inCheck: flags.inCheck,
+    snipeBlocked: flags.snipeBlocked,
   });
   screens.setRoom(
     mode === 'online' ? net.session?.room ?? null : null,

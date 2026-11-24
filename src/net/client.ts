@@ -17,6 +17,30 @@ interface StateResponse {
 const storageKey = (room: string) => `dicechess:token:${room}`;
 export const LAST_ROOM_KEY = 'dicechess:room';
 
+/**
+ * Stable per-browser id for the realtime connection. Ably treats two
+ * connections with the same client id as one client and closes the older one,
+ * so each player needs their own.
+ */
+function clientIdFor(room: string): string {
+  const key = 'dicechess:client';
+  let suffix = '';
+  try {
+    suffix = localStorage.getItem(key) ?? '';
+  } catch {
+    /* private mode */
+  }
+  if (!suffix) {
+    suffix = Math.random().toString(36).slice(2, 10);
+    try {
+      localStorage.setItem(key, suffix);
+    } catch {
+      /* private mode */
+    }
+  }
+  return `p-${room}-${suffix}`.replace(/[^A-Za-z0-9_-]/g, '');
+}
+
 async function request<T>(path: string, body?: unknown, method = 'POST'): Promise<T> {
   const response = await fetch(path, {
     method,
@@ -173,11 +197,17 @@ export class Net {
         this.startPolling();
         return;
       }
-      const Ably = (await import('ably')).default;
-      const client = new Ably.Realtime({
-        authUrl: `/api/realtime?room=${encodeURIComponent(room)}`,
+      // Ably's account-level MAU pricing rejects the legacy `ably` package from
+      // devices with error 40168; the device SDK (createClient) is the supported
+      // browser client and sends the clientId the connection requires.
+      const { createClient } = await import('@ably/pubsub-device');
+      const clientId = clientIdFor(room);
+      const client = createClient({
+        authUrl: `/api/realtime?room=${encodeURIComponent(room)}&clientId=${encodeURIComponent(
+          clientId,
+        )}`,
         authMethod: 'POST',
-        clientId: `player-${room}`,
+        clientId,
         echoMessages: false,
       });
       const channel = client.channels.get(`room-${room}`);

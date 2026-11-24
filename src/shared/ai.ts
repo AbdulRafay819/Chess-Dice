@@ -16,7 +16,7 @@ import {
   squareToFR,
   type Position,
 } from './board';
-import { allMoves, offeredMoves, previewSnipe } from './rules';
+import { allMoves, checkingPieces, offeredMoves, previewSnipe, sideInCheck } from './rules';
 import { dirAngle, snipeDirections } from './snipe';
 import type { Color, GameState, Move, PieceType, Square } from './types';
 import { other } from './types';
@@ -131,6 +131,9 @@ export function rankShots(state: GameState, skill: Skill): AiShot[] {
   const pos = parseFen(state.fen);
   const shots: AiShot[] = [];
   const jitter = AIM_JITTER[skill];
+  // In check only a shot that takes the checker is legal, so it is the only
+  // shot worth ranking — anything else would be rejected by the rules.
+  const checkers = sideInCheck(state) ? checkingPieces(state) : [];
 
   for (let i = 0; i < 64; i++) {
     const piece = pos.board[i];
@@ -145,6 +148,7 @@ export function rankShots(state: GameState, skill: Skill): AiShot[] {
         // Only a king can take a king; anything else is a wasted shot.
         if (piece.type !== 'k') continue;
       }
+      if (checkers.length && !checkers.includes(preview.hitSquare)) continue;
       const steps = Math.max(1, preview.path.indexOf(preview.hitSquare) + 1);
       const distance = Math.hypot(dir.df, dir.dr) * steps;
       const worth = target.type === 'k' ? 400 : VALUE[target.type];

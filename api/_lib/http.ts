@@ -10,20 +10,37 @@ export interface ApiRequest {
 }
 
 function readStream(req: unknown): Promise<Record<string, unknown>> {
+  const stream = req as NodeJS.ReadableStream & { readableEnded?: boolean };
+  // On Vercel the platform may already have consumed or ended the request
+  // stream (for example an empty POST from Ably's authUrl). Attaching 'end'
+  // to a finished stream never fires, which used to leave the function hanging
+  // until the platform killed it. Settle immediately in that case. Do not test
+  // `complete`: it can be true while the buffered body is still readable.
+  if (!stream || stream.readableEnded === true) return Promise.resolve({});
   return new Promise((resolve) => {
     let data = '';
-    const stream = req as NodeJS.ReadableStream;
-    stream.on('data', (chunk: unknown) => {
-      data += String(chunk);
-    });
-    stream.on('end', () => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
       try {
         resolve(data ? (JSON.parse(data) as Record<string, unknown>) : {});
       } catch {
         resolve({});
       }
+    };
+    const timer = setTimeout(finish, 2500);
+    stream.on('data', (chunk: unknown) => {
+      data += String(chunk);
     });
-    stream.on('error', () => resolve({}));
+    stream.on('end', () => {
+      clearTimeout(timer);
+      finish();
+    });
+    stream.on('error', () => {
+      clearTimeout(timer);
+      finish();
+    });
   });
 }
 

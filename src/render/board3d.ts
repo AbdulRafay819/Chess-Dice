@@ -19,7 +19,7 @@ type HighlightKind =
 
 const HIGHLIGHT_COLOR: Record<HighlightKind, number> = {
   selected: 0xffcf72,
-  move: 0x4fe3b0,
+  move: 0x3ee08a,
   capture: 0xff7a6b,
   target: 0xffb347,
   hover: 0x9fd8ff,
@@ -161,7 +161,8 @@ export class BoardView {
     }
 
     const color = HIGHLIGHT_COLOR[kind];
-    const baseOpacity = kind === 'check' ? 1 : kind === 'selected' ? 0.44 : 0.34;
+    const baseOpacity =
+      kind === 'check' ? 1 : kind === 'move' ? 0.62 : kind === 'selected' ? 0.44 : 0.34;
     // The check warning is a soft red halo rather than a flat tile, so it reads
     // as a glow spilling out from under the king.
     if (kind === 'check' && !this.checkGlow) this.checkGlow = radialSprite('#ff4136');
@@ -172,13 +173,19 @@ export class BoardView {
         map: kind === 'check' ? this.checkGlow : null,
         transparent: true,
         opacity: baseOpacity,
-        blending: THREE.AdditiveBlending,
+        // Offer squares are painted on with normal blending: additive teal over
+        // a pale square washed out to near-white, which is why the possible
+        // moves sometimes seemed to vanish.
+        blending:
+          kind === 'move' || kind === 'capture' || kind === 'selected'
+            ? THREE.NormalBlending
+            : THREE.AdditiveBlending,
         depthWrite: false,
       }),
     );
     mesh.rotation.x = -Math.PI / 2;
     const base = this.worldFromSquare(square);
-    mesh.position.set(base.x, SQUARE_TOP + 0.006, base.z);
+    mesh.position.set(base.x, SQUARE_TOP + 0.012, base.z);
     mesh.renderOrder = 3;
     mesh.userData.baseOpacity = baseOpacity;
     mesh.userData.phase = Math.random() * Math.PI * 2;

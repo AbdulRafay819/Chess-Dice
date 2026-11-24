@@ -27,6 +27,10 @@ export interface HudSyncOptions {
   busy: boolean;
   aiming: boolean;
   thinking: boolean;
+  /** The side to move is in check. */
+  inCheck: boolean;
+  /** In check with no shot that can reach the checking piece. */
+  snipeBlocked: boolean;
 }
 
 /**
@@ -131,26 +135,51 @@ export class Hud {
     this.rollBtn.textContent = state.die ? 'Roll again' : 'Roll die';
     this.choiceRow.hidden = !(state.phase === 'choice' && myTurn && !options.watching);
     this.moveChoice.disabled = options.busy || options.thinking;
-    this.snipeChoice.disabled = options.busy || options.thinking;
+    this.snipeChoice.disabled = options.busy || options.thinking || options.snipeBlocked;
+    this.snipeChoice.textContent = options.snipeBlocked ? 'Snipe blocked' : 'Snipe';
+    this.snipeChoice.title = options.snipeBlocked
+      ? 'Your king is in check — no shot reaches the checking piece, so you must move to block.'
+      : '';
     if (state.die) this.moveChoice.textContent = `Move · ${state.die}`;
     this.dock.classList.toggle('aiming', options.aiming);
 
+    const status = (text: string, warn = false) => {
+      this.dockStatus.textContent = text;
+      this.dockStatus.classList.toggle('warn', warn);
+    };
+
     if (finished) {
-      this.dockStatus.textContent = 'Match complete';
+      status('Match complete');
     } else if (options.watching) {
-      this.dockStatus.textContent = 'Waiting for an opponent to join…';
+      status('Waiting for an opponent to join…');
     } else if (options.thinking) {
-      this.dockStatus.textContent = 'Computer is thinking…';
+      status('Computer is thinking…');
     } else if (!myTurn && options.versus) {
-      this.dockStatus.textContent = 'Opponent to move';
+      status('Opponent to move');
     } else if (state.phase === 'roll') {
-      this.dockStatus.textContent = `Roll for your ${state.turn === 'w' ? 'White' : 'Black'} turn`;
+      status(`Roll for your ${state.turn === 'w' ? 'White' : 'Black'} turn`);
     } else if (state.phase === 'choice') {
-      this.dockStatus.textContent = 'A six: move or snipe';
+      if (options.snipeBlocked) {
+        status('Check! No snipe reaches the checker — move to block it.', true);
+      } else if (options.inCheck) {
+        status('A six: snipe the checking piece, or move to block.', true);
+      } else {
+        status('A six: move or snipe');
+      }
     } else if (state.phase === 'snipe') {
-      this.dockStatus.textContent = 'Pick a piece, then drag to aim';
+      status(
+        options.inCheck
+          ? 'In check — your shot must take the checking piece'
+          : 'Pick a piece, then drag to aim',
+        options.inCheck,
+      );
     } else {
-      this.dockStatus.textContent = `Die ${state.die ?? 0} · select a piece to see its offers`;
+      status(
+        options.inCheck
+          ? 'Check! Move to block, capture the attacker, or step away.'
+          : `Die ${state.die ?? 0} · select a piece to see its offers`,
+        options.inCheck,
+      );
     }
 
     this.gameOver.hidden = !finished;
