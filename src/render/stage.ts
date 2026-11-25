@@ -385,27 +385,52 @@ export class Stage {
   }
 
   /**
-   * Elevated three-quarter view down the firing lane. Sitting behind the
-   * shooter hid the shot behind its own piece, so the camera lifts above the
-   * board and steps to the side of the line instead.
+   * Elevated three-quarter view framing the whole firing lane. The lens sits off
+   * the line on whichever side is further from the statue, so a shot from any
+   * square keeps both the shooter and the landing point in frame — and the
+   * camera cannot end up inside Aurevak's crown or under the table.
    */
-  setSniperView(origin: THREE.Vector3, direction: THREE.Vector3) {
-    const dir = direction.clone().setY(0).normalize();
-    const side = new THREE.Vector3(-dir.z, 0, dir.x);
-    const position = origin
-      .clone()
-      .addScaledVector(dir, -2.4)
-      .addScaledVector(side, 3.6)
-      .add(new THREE.Vector3(0, 3.4, 0));
-    const target = origin
-      .clone()
-      .addScaledVector(dir, 2.6)
-      .add(new THREE.Vector3(0, 0.2, 0));
+  setSniperView(origin: THREE.Vector3, direction: THREE.Vector3, landing?: THREE.Vector3 | null) {
+    const dir = direction.clone().setY(0);
+    if (dir.lengthSq() < 1e-6) dir.set(0, 0, 1);
+    dir.normalize();
+
+    const end = landing
+      ? landing.clone().setY(origin.y)
+      : origin.clone().addScaledVector(dir, 2.8);
+    const span = THREE.MathUtils.clamp(origin.distanceTo(end), 1.6, 11);
+    const mid = origin.clone().lerp(end, 0.5);
+
+    const across = new THREE.Vector3(-dir.z, 0, dir.x);
+    // Two statue anchors: the figure is mirrored to the far corner per side.
+    const statue = new THREE.Vector3(-3.9, 0, -4.9);
+    const anchors = [statue, statue.clone().negate()];
+    const clearance = (point: THREE.Vector3) =>
+      Math.min(point.distanceTo(anchors[0]), point.distanceTo(anchors[1]));
+
+    const offset = 3.6 + span * 0.34;
+    const first = mid.clone().addScaledVector(across, offset);
+    const second = mid.clone().addScaledVector(across, -offset);
+    const position = clearance(first) >= clearance(second) ? first : second;
+
+    // Belt and braces: push the lens out of the monument if it landed inside it.
+    for (const anchor of anchors) {
+      const away = position.clone().sub(anchor).setY(0);
+      const distance = away.length();
+      if (distance < 2.8) {
+        if (distance < 0.001) away.copy(across);
+        position.addScaledVector(away.normalize(), 2.8 - distance + 0.6);
+      }
+    }
+
+    position.y = 3.2 + span * 0.26;
+    const target = mid.clone();
+    target.y = origin.y + 0.25;
     this.sniperPose = { position, target, fov: 52 };
     this.mode = 'sniper';
     this.controls.enabled = false;
     this.applyFraming();
-    this.beginTransition(this.sniperPose, 0.55);
+    this.beginTransition(this.sniperPose, 0.6);
   }
 
   private beginTransition(to: Pose, duration: number) {

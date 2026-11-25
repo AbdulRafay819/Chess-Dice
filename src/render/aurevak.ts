@@ -29,7 +29,7 @@ export class Aurevak {
   private hand = new THREE.Group();
   private handAnchor = new THREE.Object3D();
 
-  private shoulderPlate = new THREE.Mesh();
+  private castPlate = new THREE.Group();
   private artifact = new THREE.Group();
   private artifactCore!: THREE.Mesh;
   private artifactMaterial!: THREE.MeshStandardMaterial;
@@ -369,35 +369,15 @@ export class Aurevak {
     this.castArm.add(this.limb(new THREE.Vector3(), rel(elbow), 0.098, 0.08, cloth));
     this.castArm.add(this.limb(rel(elbow), rel(wrist), 0.078, 0.06, cloth));
 
-    const pauldron = new THREE.Mesh(
-      new THREE.SphereGeometry(0.29, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.56),
-      obsidian,
-    );
-    pauldron.scale.set(1.18, 0.44, 1.22);
-    pauldron.rotation.z = -0.4;
-    pauldron.position.y = 0.06;
-    this.castArm.add(pauldron);
-    const pauldronRim = new THREE.Mesh(new THREE.TorusGeometry(0.29, 0.016, 5, 26), gold);
-    pauldronRim.rotation.x = Math.PI / 2;
-    pauldronRim.position.y = -0.03;
-    pauldronRim.rotation.z = -0.4;
-    pauldronRim.scale.set(1.18, 1.22, 1);
-    this.castArm.add(pauldronRim);
+    // Shoulders are layered plates, not round pads: overlapping shells that
+    // step out and down over the arm, each with a gold edge.
+    this.castPlate = this.shoulderPlates(obsidian, gold, 1);
+    this.castPlate.position.set(0.02, 0.07, 0);
+    this.castArm.add(this.castPlate);
 
-    const otherPauldron = new THREE.Mesh(
-      new THREE.SphereGeometry(0.29, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.56),
-      obsidian,
-    );
-    otherPauldron.scale.set(1.18, 0.44, 1.22);
-    otherPauldron.rotation.z = 0.4;
-    otherPauldron.position.set(-0.46, 1.73, 0.0);
-    this.body.add(otherPauldron);
-    const otherRim = new THREE.Mesh(new THREE.TorusGeometry(0.29, 0.016, 5, 26), gold);
-    otherRim.rotation.x = Math.PI / 2;
-    otherRim.rotation.z = 0.4;
-    otherRim.position.set(-0.46, 1.71, 0.0);
-    otherRim.scale.set(1.18, 1.22, 1);
-    this.body.add(otherRim);
+    const restingPlate = this.shoulderPlates(obsidian, gold, -1);
+    restingPlate.position.set(-0.46, 1.74, 0);
+    this.body.add(restingPlate);
 
     // Hand: open palm, fingers curled slightly, crimson cuff behind it.
     const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.1, 12), lining);
@@ -434,7 +414,59 @@ export class Aurevak {
     this.handAnchor.position.set(0, 0.11, 0.16);
     this.hand.add(this.handAnchor);
 
-    this.shoulderPlate = pauldron;
+  }
+
+  /**
+   * One pauldron: three overlapping curved shells, faceted so they read as
+   * forged plate. Every tier is wider and hangs lower than the one above it,
+   * and a gold band follows its lower rim — armour stacked in layers.
+   */
+  private shoulderPlates(
+    obsidian: THREE.MeshStandardMaterial,
+    gold: THREE.MeshStandardMaterial,
+    side: 1 | -1,
+  ): THREE.Group {
+    const group = new THREE.Group();
+    // A touch lighter than the robes, so the facets of each layer catch the
+    // light and read as plate instead of dissolving into the cloak.
+    const plate = obsidian.clone();
+    plate.color.setHex(0x24262f);
+    plate.roughness = 0.32;
+    plate.metalness = 0.78;
+    plate.flatShading = true;
+    plate.side = THREE.DoubleSide;
+    plate.needsUpdate = true;
+
+    const tiers = [
+      [0.19, 0.275, 0.15, 3.1],
+      [0.268, 0.365, 0.15, 2.85],
+      [0.35, 0.45, 0.145, 2.65],
+    ] as const;
+
+    tiers.forEach(([top, bottom, height, sweep], index) => {
+      const y = -index * 0.15;
+      // Arcs are centred on the outer face of the shoulder, not the chest: the
+      // plates hang over the arm instead of banding the whole torso.
+      const start = (side * Math.PI) / 2 - sweep / 2;
+      const shell = new THREE.Mesh(
+        new THREE.CylinderGeometry(top, bottom, height, 9, 1, true, start, sweep),
+        plate,
+      );
+      shell.position.y = y;
+      shell.rotation.x = 0.1 + index * 0.07;
+      group.add(shell);
+
+      const rim = new THREE.Mesh(
+        new THREE.CylinderGeometry(bottom + 0.008, bottom + 0.013, 0.022, 9, 1, true, start, sweep),
+        gold,
+      );
+      rim.position.y = y - height / 2 + 0.006;
+      rim.rotation.x = shell.rotation.x;
+      group.add(rim);
+    });
+
+    group.rotation.z = -side * 0.22;
+    return group;
   }
 
   private buildHead(
@@ -514,41 +546,84 @@ export class Aurevak {
     chin.position.set(0, 0.02, 0.19);
     this.headPivot.add(chin);
 
-    // Crown: asymmetrical blades of uneven height on a gold ring.
-    const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.21, 0.07, 12, 1, true), gold);
+    // Crown: a broken collection of blades seated in a gold ring. The blades
+    // are set face-on to the front in two staggered ranks — fanning them
+    // radially put their edges to the camera, which read as antlers.
+    const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.188, 0.208, 0.08, 14, 1, true), gold);
     ring.position.y = 0.3;
     this.headPivot.add(ring);
+    const seat = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.196, 0.196, 0.022, 14, 1, true),
+      maskFace,
+    );
+    seat.position.y = 0.268;
+    this.headPivot.add(seat);
 
-    // Blade heights are deliberately uneven, and the outward lean is small, so
-    // the crown looks like broken swords pushed upright, not a peacock fan.
-    const heights = [0.82, 0.46, 0.64, 0.38, 0.56, 0.42];
-    heights.forEach((height, index) => {
-      const angle = (index / heights.length) * Math.PI * 2 + 0.16;
-      const blade = new THREE.Mesh(this.bladeGeometry(height), gold);
-      blade.position.set(Math.sin(angle) * 0.165, 0.31, Math.cos(angle) * 0.165);
-      blade.rotation.y = angle;
-      blade.rotation.x = 0.02 + (index % 2) * 0.03;
-      this.headPivot.add(blade);
-    });
+    // Deliberately uneven heights and leans: swords pushed upright in a crown.
+    const blades = [
+      { x: 0.0, z: -0.03, h: 0.6, w: 0.088, yaw: 0, lean: 0 },
+      { x: -0.152, z: 0.014, h: 0.34, w: 0.082, yaw: -0.3, lean: -0.07 },
+      { x: 0.158, z: 0.004, h: 0.47, w: 0.086, yaw: 0.3, lean: 0.05 },
+      { x: -0.086, z: -0.108, h: 0.29, w: 0.074, yaw: -0.14, lean: -0.04 },
+      { x: 0.092, z: -0.11, h: 0.24, w: 0.072, yaw: 0.16, lean: 0.03 },
+      { x: 0.0, z: -0.16, h: 0.4, w: 0.078, yaw: 0, lean: 0 },
+    ] as const;
+    for (const blade of blades) {
+      const mesh = new THREE.Mesh(this.bladeGeometry(blade.h, blade.w), gold);
+      mesh.position.set(blade.x, 0.33, blade.z);
+      mesh.rotation.set(0.02, blade.yaw, blade.lean);
+      // A fuller down the face of every blade: the detail that reads as a
+      // sword rather than a spike at game distance.
+      const fuller = new THREE.Mesh(
+        new THREE.BoxGeometry(0.007, blade.h * 0.58, 0.004),
+        maskFace,
+      );
+      fuller.position.set(0, blade.h * 0.44, 0.016);
+      mesh.add(fuller);
+      this.headPivot.add(mesh);
+    }
+
+    // The tallest blade carries a crossguard, a pommel and a dark fuller, so the
+    // crown's centrepiece cannot be mistaken for a horn.
+    // The guard sits clear of the mask plate, so the centrepiece reads as a
+    // sword standing in the crown rather than a bare spike.
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.155, 0.022, 0.03), gold);
+    guard.position.set(0, 0.455, -0.018);
+    this.headPivot.add(guard);
+    const pommel = new THREE.Mesh(new THREE.OctahedronGeometry(0.024, 0), gold);
+    pommel.position.set(0, 0.413, -0.018);
+    this.headPivot.add(pommel);
+    const fuller = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.26, 0.006), maskFace);
+    fuller.position.set(0, 0.6, -0.014);
+    this.headPivot.add(fuller);
   }
 
-  /** Tapered, slightly curved crown blade, shaped like a broken sword. */
-  private bladeGeometry(height: number): THREE.ExtrudeGeometry {
+  /**
+   * Crown blade: straight edges and a chipped, angled point. Curved sides read
+   * as horns, so every edge here is a straight line.
+   */
+  private bladeGeometry(height: number, width: number): THREE.ExtrudeGeometry {
+    const half = width / 2;
     const shape = new THREE.Shape();
-    shape.moveTo(-0.052, 0);
-    shape.lineTo(0.052, 0);
-    shape.lineTo(0.044, height * 0.55);
-    shape.quadraticCurveTo(0.036, height * 0.82, 0.01, height);
-    shape.quadraticCurveTo(-0.016, height * 0.8, -0.036, height * 0.52);
+    shape.moveTo(-half, 0);
+    shape.lineTo(half, 0);
+    shape.lineTo(half * 0.82, height * 0.64);
+    shape.lineTo(half * 0.34, height * 0.88);
+    shape.lineTo(width * 0.08, height);
+    shape.lineTo(-half * 0.52, height * 0.84);
+    shape.lineTo(-half * 0.84, height * 0.58);
     shape.closePath();
-    return new THREE.ExtrudeGeometry(shape, {
-      depth: 0.032,
+    const depth = 0.028;
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+      depth,
       bevelEnabled: true,
-      bevelThickness: 0.005,
+      bevelThickness: 0.006,
       bevelSize: 0.005,
       bevelSegments: 1,
-      curveSegments: 4,
+      curveSegments: 5,
     });
+    geometry.translate(0, 0, -depth / 2);
+    return geometry;
   }
 
   private buildArtifact(gold: THREE.MeshStandardMaterial, obsidian: THREE.MeshStandardMaterial) {
@@ -690,7 +765,7 @@ export class Aurevak {
     this.castArm.rotation.x = -flare * 0.2;
     this.castArm.rotation.z = flare * 0.08;
     this.hand.rotation.x = -flare * 0.45;
-    this.shoulderPlate.scale.y = 0.72 + flare * 0.03;
+    this.castPlate.rotation.z = -0.22 + flare * 0.16;
 
     // The artifact is the die he manipulates: it leaves the palm as the real
     // die is cast, and returns once the ritual settles.

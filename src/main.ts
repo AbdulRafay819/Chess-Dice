@@ -84,6 +84,8 @@ let legal: Move[] = [];
 let aiming: { from: Square; start: THREE.Vector3; power: number; angle: number } | null = null;
 let busy = false;
 let snipePlaying = false;
+/** The in-flight cast: resolves when the die has come to rest. */
+let dieCast: Promise<void> = Promise.resolve();
 let pendingState: AnyState | null = null;
 let snipeSeen = -1;
 
@@ -386,7 +388,7 @@ function present(next: AnyState) {
   }
   if (action?.type === 'roll') {
     aurevak.invoke();
-    void die.roll(action.value, aurevak.handPoint());
+    dieCast = die.roll(action.value, aurevak.handPoint());
   }
   finishPresent(next);
 }
@@ -438,6 +440,11 @@ function playFeedback(state: AnyState) {
   hadCheck = checked;
 }
 
+/** Wait for the die to settle, capped so a hidden tab can never stall a turn. */
+async function awaitDieSettle(maxMs = 2800) {
+  await Promise.race([dieCast, wait(maxMs)]);
+}
+
 function flushPending() {
   if (!pendingState) return;
   const queued = pendingState;
@@ -465,7 +472,14 @@ async function playSnipe(state: AnyState, result: SnipeResult) {
 
   const origin = board.worldFromSquare(result.from);
   const direction = new THREE.Vector3(Math.cos(result.dirAngle), 0, Math.sin(result.dirAngle));
-  stage.setSniperView(origin, direction);
+  // Frame the whole flight, not a point past the muzzle: a lens planted behind
+  // the shooter could end up inside the statue with nothing in view.
+  const landingSquare = result.hitSquare ?? result.path[result.path.length - 1] ?? null;
+  stage.setSniperView(
+    origin,
+    direction,
+    landingSquare ? board.worldFromSquare(landingSquare) : null,
+  );
   hud.setView('sniper');
 
   await wait(220);
@@ -997,7 +1011,10 @@ async function runComputerTurn() {
       const seed = Math.floor(Math.random() * 0xffffffff);
       solo = { ...applyRoll(solo, value, seed), version: solo.version + 1 };
       present(solo);
-      await wait(820);
+      // The computer waits for the cast to finish: acting 800 ms into a 1.6 s
+      // tumble made the die cut off mid-roll.
+      await awaitDieSettle();
+      await wait(180);
       if (!alive()) return;
       state = solo;
     }
